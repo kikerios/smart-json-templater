@@ -1,0 +1,23 @@
+{
+  "name": "smart-json-templater",
+  "version": "1.0.0",
+  "description": "Smart Json Templater is an opinionated simple way to do mustache style template replacements on your json objects ",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com:kikerios/smart-json-templater.git"
+  },
+  "scripts": {
+    "test": "coming soon"
+  },
+  "author": "@kikerios <web.lrios@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.5.1",
+    "bucker": "^1.1.1",
+    "confidence": "^3.0.2",
+    "json-templater": "^1.2.0",
+    "lodash": "^4.17.5",
+    "to-boolean": "^1.0.0"
+  }
+}
