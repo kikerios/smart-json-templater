@@ -6,66 +6,76 @@ const Logger = require('bucker').createLogger({
 
 const Promise = require('bluebird')
 const _ = require('lodash')
+const jp = require('jsonpath')
 const { object: templater } = require('json-templater')
 
-const convert = (template, masterRules, raw) => {
-  const results = []
+const convert = (template, rules, raw) => {
 
-  const saving = ({ ignore, save }, persistent, value) => {
-    if (save) {
-      if (ignore) {
-        value = _.omit(value, ignore) // eslint-disable-line
-      }
-      _.set(persistent, save, value)
+  const clear = (ignore, value) => {
+    if (ignore) {
+      return _.omit(value, ignore) // eslint-disable-line
     }
-    return persistent
+    return value
   }
 
-  const recursive = (rules, data, persistent) =>
-    new Promise((resolve) => {
-      let isEnd = false
-      Promise.reduce(rules, (persistent, rule) => { // eslint-disable-line
-        const {
-          root,
-          path,
-          rules: innerRules,
-          end,
-        } = rule
-
-        // reset end validation
-        isEnd = end
-
-        let source = data // source == data if root == *
-        if (root === 'raw') {
-          source = raw
-        } else if (root !== '/') {
-          source = _.get(persistent, root)
-        }
-
-        const value = (path && path !== '/') ? _.get(source, path) : source
-        const updated = saving(rule, persistent, value)
-
-        if (_.isArray(value) && innerRules) {
-          return Promise.each(value, v => recursive(innerRules, v, _.cloneDeep(updated)))
-        }
-        return updated
-      }, persistent).then((result) => {
-        if (isEnd) {
-          results.push(result)
-        }
-        resolve(result)
-      })
+  const updatePersistent = ({ save, ignore }, nodes, persistents) => {
+    const isArrayNodes = (_.isArray(nodes) && _.size(nodes) > 1)
+    const newPersistent = _.map(persistents, (persistent) => {
+      if (isArrayNodes) {
+        return (_.map(nodes, (node) => { // eslint-disable-line
+          const merge = _.mergeWith(
+            _.cloneDeep(persistent),
+            { [save]: clear(ignore, node.value) }, (objValue, srcValue) => {
+              if (_.isArray(objValue)) {
+                return objValue.concat(srcValue)
+              }
+              return srcValue
+            },
+          )
+          Logger.debug(merge)
+          return merge
+        }))
+      }
+      const node = _.first(nodes)
+      return _.set(persistent, save, clear(ignore, node.value)) // eslint-disable-line
     })
+    return isArrayNodes ? _.first(newPersistent) : newPersistent
+  }
+
+  let counter = 0
+  const recursive = (persistent) => {
+    const rule = rules[counter++]// eslint-disable-line
+
+    return new Promise((resolve) => {
+      if (!rule) {
+        return resolve(persistent)
+      }
+
+      const {
+        xpath,
+      } = rule
+
+      const values = jp.nodes(raw, xpath)
+      Logger.debug(values)
+      persistent = updatePersistent( // eslint-disable-line
+        rule,
+        values,
+        _.isArray(persistent) ? persistent : [persistent],
+      )
+
+      return resolve(recursive(persistent))
+    })
+  }
 
   return new Promise((resolve, reject) => {
-    recursive(masterRules, raw, {})
-      .then(() => {
-        Logger.debug(JSON.stringify(results))
+    recursive({})
+      .then((results) => {
+        Logger.debug('results', JSON.stringify(results))
         const map = _.map(results, (item) => {
-          _.set(item, 'raw', _.cloneDeep(item))
+          // _.set(item, 'raw', _.cloneDeep(item))
           return templater(template, item)
         })
-        Logger.debug(JSON.stringify(map))
+        // Logger.debug('map', JSON.stringify(map))
         resolve(map)
       }).catch((error) => {
         Logger.error(error)
