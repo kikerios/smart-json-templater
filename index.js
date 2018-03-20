@@ -6,8 +6,11 @@ const Logger = require('bucker').createLogger({
 
 const Promise = require('bluebird')
 const _ = require('lodash')
-const jp = require('jsonpath')
+const jp = require('jsonpath-wdf')
 const { object: templater } = require('json-templater')
+
+// set jsonpath default value
+jp.default({ enable: true, value: null })
 
 const convert = (template, rules, raw) => {
 
@@ -20,25 +23,64 @@ const convert = (template, rules, raw) => {
 
   const updatePersistent = ({ save, ignore }, nodes, persistents) => {
     const isArrayNodes = (_.isArray(nodes) && _.size(nodes) > 1)
+    const isArrayPersistent = (_.isArray(persistents) && _.size(persistents) > 1)
+    let counterPersistent = 0
     const newPersistent = _.map(persistents, (persistent) => {
       if (isArrayNodes) {
-        return (_.map(nodes, (node) => { // eslint-disable-line
-          const merge = _.mergeWith(
-            _.cloneDeep(persistent),
-            { [save]: clear(ignore, node.value) }, (objValue, srcValue) => {
-              if (_.isArray(objValue)) {
-                return objValue.concat(srcValue)
-              }
-              return srcValue
-            },
-          )
-          Logger.debug(merge)
-          return merge
-        }))
+        if (!isArrayPersistent) {
+          return (_.map(nodes, (node) => { // eslint-disable-line
+            const merge = _.mergeWith(
+              _.cloneDeep(persistent),
+              { [save]: clear(ignore, node.value) }, (objValue, srcValue) => {
+                if (_.isArray(objValue)) {
+                  return objValue.concat(srcValue)
+                }
+                return srcValue
+              },
+            )
+            return merge
+          }))
+        } else { // eslint-disable-line
+          const currentNode = nodes[counterPersistent]
+
+          // search node parent array
+          const parentPath = _.dropRightWhile(currentNode.path, (o) => { // eslint-disable-line
+            return !_.isNumber(o)
+          })
+          const parent = jp.parent(raw, jp.stringify(parentPath))
+          Logger.debug('parent', jp.stringify(parentPath))
+          Logger.debug('persistent', persistent)
+          const map = (_.map(parent, (child) => { // eslint-disable-line
+            const node = nodes[counterPersistent]
+            const merge = _.mergeWith(
+              _.cloneDeep(persistent),
+              { [save]: clear(ignore, node.value) }, (objValue, srcValue) => {
+                if (_.isArray(objValue)) {
+                  return objValue.concat(srcValue)
+                }
+                return srcValue
+              },
+            )
+            counterPersistent++ // eslint-disable-line
+            return merge
+          }))
+
+          if (_.size(parent) === 0) {
+            counterPersistent++ // eslint-disable-line
+          }
+
+          Logger.debug('%j', map)
+          return map
+        }
       }
       const node = _.first(nodes)
       return _.set(persistent, save, clear(ignore, node.value)) // eslint-disable-line
     })
+    if (isArrayPersistent) {
+      return _.reduce(newPersistent, (result, value) => {
+        return result.concat(value)
+      }, [])
+    }
     return isArrayNodes ? _.first(newPersistent) : newPersistent
   }
 
@@ -56,7 +98,6 @@ const convert = (template, rules, raw) => {
       } = rule
 
       const values = jp.nodes(raw, xpath)
-      Logger.debug(values)
       persistent = updatePersistent( // eslint-disable-line
         rule,
         values,
@@ -70,12 +111,10 @@ const convert = (template, rules, raw) => {
   return new Promise((resolve, reject) => {
     recursive({})
       .then((results) => {
-        Logger.debug('results', JSON.stringify(results))
         const map = _.map(results, (item) => {
-          // _.set(item, 'raw', _.cloneDeep(item))
+          _.set(item, 'raw', _.cloneDeep(item))
           return templater(template, item)
         })
-        // Logger.debug('map', JSON.stringify(map))
         resolve(map)
       }).catch((error) => {
         Logger.error(error)
