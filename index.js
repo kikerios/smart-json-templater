@@ -29,7 +29,11 @@ const convert = (template, rules, raw, flatten = true) => {
     const newContext = _.map(context, (ctx) => {
       if (multiNodes) {
         if (!multiContext) {
-          return _.map(nodes, ({ value, path }) => merge(ctx, save, value, [parent(path)]))
+          if (_.size(nodes) >= 1) {
+            return _.map(nodes, ({ value, path }) =>
+              merge(ctx, save, value, [parent(path)]))
+          }
+          return _.set(ctx, save, null)
         }
 
         const splitter = _.get(ctx, SPLIT_KEY, [])
@@ -57,12 +61,18 @@ const convert = (template, rules, raw, flatten = true) => {
           })
         }
 
-        return _.map(filters, ({ value, path }) =>
-          merge(ctx, save, value, _.union([parent(path)], splitter)))
+        if (_.size(filters) >= 1) {
+          return _.map(filters, ({ value, path }) =>
+            merge(ctx, save, value, _.union([parent(path)], splitter)))
+        }
+        return _.set(ctx, save, null)
       }
 
-      const { value } = _.first(nodes)
-      return _.set(ctx, save, value)
+      const node = _.first(nodes)
+      if (node) {
+        return _.set(ctx, save, node.value)
+      }
+      return _.set(ctx, save, null)
     })
 
     if (multiContext) {
@@ -93,7 +103,8 @@ const convert = (template, rules, raw, flatten = true) => {
           if (value === '{{~}}') {
             return _.omit(item, SPLIT_KEY)
           }
-          return render(value, data)
+          const result = render(value, data)
+          return result.startsWith('{{') ? null : result
         }))
         if (flatten && _.size(map) === 1) {
           return resolve(_.first(map))

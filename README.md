@@ -1,5 +1,8 @@
+
 # 💪 Smart Json Templater 👌
 
+## install
+`npm i smart-json-templater --save`
 ## rules.json (Using JSONPath Syntax)
 ```
 [
@@ -155,10 +158,7 @@ Key| Description
   ]
 }
 ```
-### install
-`npm i smart-json-templater --save`
-
-### example
+## example
 ```
 const templater = require('smart-json-templater')
 
@@ -273,4 +273,8 @@ templater.convert(template, rules, raw)
   }
 ]
 ```
+## test with jest ( `npm install --save-dev jest` )
+`npm test`
+
+--------
 with ❤ by [@kikerios](https://github.com/kikerios)
