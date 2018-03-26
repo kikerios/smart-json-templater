@@ -1,14 +1,15 @@
 const template = {
   "data": {
     "date": "{{pageTime}}",
-    "message": "{{facebookMessage.message.text}}",
+    "message": "{{message}}",
     "type": "text-message"
   },
   "database": {
-    "id": "{{facebookMessage.message.mid}}"
+    "id": "{{mid}}",
+    "pageId": "{{pageId}}"
   },
   "user": {
-    "id": "{{facebookMessage.sender.id}}"
+    "id": "{{senderId}}"
   },
   "analyze": true,
   "raw": "{{raw}}"
@@ -52,17 +53,17 @@ const raw = {
     },
     {
       "id": "<PAGE_ID2>",
-      "time": 1458692752478,
+      "time": 14586927524780000,
       "messaging": []
     },
     {
       "id": "<PAGE_ID3>",
-      "time": 1458692752478,
+      "time": 14586927524780000,
       "messaging": [
         {
           "message": {
             "mid": "mid.1457764197618:41d102a3e1ae206a38",
-            "text": "hello, world!"
+            "text": "hello, world! 3"
           },
           "recipient": {
             "id": "<PAGE_ID>"
@@ -106,16 +107,31 @@ const rules = [
     ignore: null,
     save: 'type2',
   },
-  // {
-  //   xpath: '$.entry[*].messaging[*].message.text',
-  //   ignore: null,
-  //   save: 'text',
-  // },
+  {
+    xpath: '$.entry[*].messaging[*].message.text',
+    ignore: null,
+    save: 'message',
+  },
+  {
+    xpath: '$.entry[*].messaging[*].message.mid',
+    ignore: null,
+    save: 'mid',
+  },
+  {
+    xpath: '$.entry[*].messaging[*].sender.id',
+    ignore: null,
+    save: 'senderId',
+  },
+  {
+    xpath: '$.entry[*].time',
+    ignore: null,
+    save: 'pageTime',
+  },
 ]
 
 const templater = require('./index')
 
 templater.convert(template, rules, raw)
   .then((result) => {
-    // console.log(result)
+    console.log(JSON.stringify(result))
   })
