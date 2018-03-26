@@ -1,6 +1,6 @@
 const templater = require('./index')
 
-test('Book information', (done) => {
+test('Book information #1', (done) => {
   const data = {
     store: {
       book: [
@@ -49,14 +49,13 @@ test('Book information', (done) => {
       xpath: '$.store.book[*].isbn',
       save: 'isbn',
     },
+    {
+      xpath: '$..price',
+      save: 'price',
+    },
   ]
 
-  const template = {
-    author: '{{author}}',
-    title: '{{title}}',
-    isbn: '{{isbn}}',
-    library: '{{address}}',
-  }
+  const template = '{{~}}'
 
   templater
     .convert(template, rules, data)
@@ -65,6 +64,146 @@ test('Book information', (done) => {
       expect(result.length).toBe(4)
       expect(result[0].isbn).toBeNull()
       expect(result[3].isbn).not.toBeNull()
+      done()
+    })
+})
+
+test('Book information #2', (done) => {
+  const data = {
+    store: {
+      book: [
+        {
+          category: 'reference',
+          author: 'Nigel Rees',
+          title: 'Sayings of the Century',
+          price: 8.95,
+        }, {
+          category: 'fiction',
+          author: 'Evelyn Waugh',
+          title: 'Sword of Honour',
+          price: 12.99,
+        }, {
+          category: 'fiction',
+          author: 'Herman Melville',
+          title: 'Moby Dick',
+          isbn: '0-553-21311-3',
+          price: 8.99,
+        }, {
+          category: 'fiction',
+          author: 'J. R. R. Tolkien',
+          title: 'The Lord of the Rings',
+          isbn: '0-395-19395-8',
+          price: 22.99,
+        },
+      ],
+      address: 'The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ',
+    },
+  }
+
+  const rules = [
+    {
+      xpath: '$..author',
+      save: 'author',
+    },
+    {
+      xpath: '$..title',
+      save: 'title',
+    },
+    {
+      xpath: '$.store.address',
+      save: 'address',
+    },
+    {
+      xpath: '$.store.book[*].isbn',
+      save: 'isbn',
+    },
+    {
+      xpath: '$..price',
+      save: 'price',
+    },
+  ]
+
+  const template = {
+    public: '{{title}} by "{{author}}", only for USD {{price}}',
+    library: '{{address}}',
+  }
+
+  templater
+    .convert(template, rules, data)
+    .then((result) => {
+      console.log(JSON.stringify(result))
+      expect(result.length).toBe(4)
+      done()
+    })
+})
+
+test('Book information #3', (done) => {
+  const data = {
+    store: {
+      book: [
+        {
+          category: 'reference',
+          author: 'Nigel Rees',
+          title: 'Sayings of the Century',
+          price: 8.95,
+        }, {
+          category: 'fiction',
+          author: 'Evelyn Waugh',
+          title: 'Sword of Honour',
+          price: 12.99,
+        }, {
+          category: 'fiction',
+          author: 'Herman Melville',
+          title: 'Moby Dick',
+          isbn: '0-553-21311-3',
+          price: 8.99,
+        }, {
+          category: 'fiction',
+          author: 'J. R. R. Tolkien',
+          title: 'The Lord of the Rings',
+          isbn: '0-395-19395-8',
+          price: 22.99,
+        },
+      ],
+      address: 'The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ',
+    },
+  }
+
+  const rules = [
+    {
+      xpath: '$..author',
+      save: 'author',
+    },
+    {
+      xpath: '$..title',
+      save: 'title',
+    },
+    {
+      xpath: '$.store.address',
+      save: 'address',
+    },
+    {
+      xpath: '$.store.book[*].isbn',
+      save: 'isbn',
+    },
+    {
+      xpath: '$..price',
+      save: 'price',
+    },
+  ]
+
+  const template = {
+    type: 'e-book',
+    shipping: true,
+    available: true,
+    information: '{{~}}',
+  }
+
+  templater
+    .convert(template, rules, data)
+    .then((result) => {
+      console.log(JSON.stringify(result))
+      expect(result.length).toBe(4)
       done()
     })
 })
@@ -192,7 +331,7 @@ test('Facebook Payload Information', (done) => {
     },
     analyze: true,
     normalizer: '{{~}}',
-    raw: '{{$}}',
+    // raw: '{{$}}',
   }
 
   templater

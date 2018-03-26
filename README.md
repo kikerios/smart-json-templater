@@ -1,38 +1,64 @@
 
+
 # 💪 Smart Json Templater 👌
 
 ## install
 `npm i smart-json-templater --save`
+## raw.json (Original data / request)
+```
+{
+ store: {
+   book: [
+     {
+       category: 'reference',
+       author: 'Nigel Rees',
+       title: 'Sayings of the Century',
+       price: 8.95,
+     }, {
+       category: 'fiction',
+       author: 'Evelyn Waugh',
+       title: 'Sword of Honour',
+       price: 12.99,
+     }, {
+       category: 'fiction',
+       author: 'Herman Melville',
+       title: 'Moby Dick',
+       isbn: '0-553-21311-3',
+       price: 8.99,
+     }, {
+       category: 'fiction',
+       author: 'J. R. R. Tolkien',
+       title: 'The Lord of the Rings',
+       isbn: '0-395-19395-8',
+       price: 22.99,
+     },
+   ],
+   address: 'The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ',
+ },
+}
+```
 ## rules.json (Using JSONPath Syntax)
 ```
 [
   {
-    xpath: '$.object', // JSONPath Syntax
-    save: 'type', // save the result in this key
+    xpath: '$..author', // JSONPath Syntax
+    save: 'author', // save the result in this key
   },
   {
-    xpath: '$.entry[*].id', // JSONPath Syntax
-    save: 'pageId', // save the result in this key
+    xpath: '$..title', // JSONPath Syntax
+    save: 'title', // save the result in this key
   },
   {
-    xpath: '$.test', // JSONPath Syntax
-    save: 'type2', // save the result in this key
+    xpath: '$.store.address', // JSONPath Syntax
+    save: 'address', // save the result in this key
   },
   {
-    xpath: '$.entry[*].messaging[*].message.text', // JSONPath Syntax
-    save: 'message', // save the result in this key
+    xpath: '$.store.book[*].isbn', // JSONPath Syntax
+    save: 'isbn', // save the result in this key
   },
   {
-    xpath: '$.entry[*].messaging[*].message.mid', // JSONPath Syntax
-    save: 'mid', // save the result in this key
-  },
-  {
-    xpath: '$.entry[*].messaging[*].sender.id', // JSONPath Syntax
-    save: 'senderId', // save the result in this key
-  },
-  {
-    xpath: '$.entry[*].time', // JSONPath Syntax
-    save: 'pageTime', // save the result in this key
+    xpath: '$..price',
+    save: 'price',
   },
 ]
 ```
@@ -54,24 +80,17 @@ JSONPath         | Description
 Here are syntax and examples [JSONPath.md](https://github.com/kikerios/smart-json-templater/blob/master/JSONPath.md)
 
 
-## template.json
+## template
 ```
-{
-  "data": {
-    "date": "{{pageTime}}", // use the key created in the rules
-    "message": "{{message}}", // use the key created in the rules
-    "type": "text-message" // static value
-  },
-  "database": {
-    "id": "{{mid}}", // use the key created in the rules
-    "pageId": "{{pageId}}" // use the key created in the rules
-  },
-  "user": {
-    "id": "{{senderId}}" // use the key created in the rules
-  },
-  "analyze": true, // static value
-  "normalizer": "{{~}}", // special key
+The template must be a String
+const template = '{{~}}' // special key
+
+or a JSON
+const template = {
+	public: '{{title}} by "{{author}}", only for USD {{price}}',
+	library: '{{address}}',
 }
+
 ```
 ### Special Keys
 
@@ -80,195 +99,163 @@ Key| Description
 `{{~}}`               | Attach transformed data
 `{{$}}`                | Attach original data / request
 
-## raw.json (Original data / request)
-```
-{
-  "object": "page",
-  "test": "kike",
-  "entry": [
-    {
-      "id": "<PAGE_ID1>",
-      "time": 1458692752478,
-      "messaging": [
-        {
-          "message": {
-            "mid": "mid.1457764197618:41d102a3e1ae206a38",
-            "text": "hello, world!"
-          },
-          "recipient": {
-            "id": "<PAGE_ID>"
-          },
-          "sender": {
-            "id": "<PSID>"
-          },
-          "timestamp": 1458692752478
-        },
-        {
-          "message": {
-            "mid": "mid#2",
-            "text": "text#2"
-          },
-          "recipient": {
-            "id": "recipient#2"
-          },
-          "sender": {
-            "id": "sender#2"
-          },
-          "timestamp": 2
-        }
-      ]
-    },
-    {
-      "id": "<PAGE_ID2>",
-      "time": 14586927524780000,
-      "messaging": []
-    },
-    {
-      "id": "<PAGE_ID3>",
-      "time": 14586927524780000,
-      "messaging": [
-        {
-          "message": {
-            "mid": "mid.1457764197618:41d102a3e1ae206a38",
-            "text": "hello, world! 3"
-          },
-          "recipient": {
-            "id": "<PAGE_ID>"
-          },
-          "sender": {
-            "id": "<PSID>"
-          },
-          "timestamp": 1458692752478
-        },
-        {
-          "message": {
-            "mid": "mid#2",
-            "text": "text#2ddd"
-          },
-          "recipient": {
-            "id": "recipient#2"
-          },
-          "sender": {
-            "id": "sender#2"
-          },
-          "timestamp": 2
-        }
-      ]
-    }
-  ]
-}
-```
-## example
+## example #1
 ```
 const templater = require('smart-json-templater')
 
 // example data
-const template = require('./template.json')
+const template = '{{~}}'
 const rules = require('./rules.json')
 const raw = require('./raw.json')
 
-templater.convert(template, rules, raw)
-    .then((result)=>{
-        console.log(result)
-    })
+templater
+	.convert(template, rules, raw)
+	.then((result)=>{
+			console.log(result)
+	})
 ```
-## result
+## result #1
 ```
 [
   {
-    "data":{
-      "date":"1458692752478",
-      "message":"hello, world!",
-      "type":"text-message"
-    },
-    "database":{
-      "id":"mid.1457764197618:41d102a3e1ae206a38",
-      "pageId":"<PAGE_ID1>"
-    },
-    "user":{
-      "id":"<PSID>"
-    },
-    "analyze":true,
-    "normalizer":{
-      "type":"page",
-      "pageId":"<PAGE_ID1>",
-      "type2":"kike",
-      "message":"hello, world!",
-      "mid":"mid.1457764197618:41d102a3e1ae206a38",
-      "senderId":"<PSID>",
-      "pageTime":1458692752478
+    "author":"Nigel Rees",
+    "title":"Sayings of the Century",
+    "address":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ",
+    "isbn":null,
+    "price":8.95
+  },
+  {
+    "author":"Evelyn Waugh",
+    "title":"Sword of Honour",
+    "address":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ",
+    "isbn":null,
+    "price":12.99
+  },
+  {
+    "author":"Herman Melville",
+    "title":"Moby Dick",
+    "address":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ",
+    "isbn":"0-553-21311-3",
+    "price":8.99
+  },
+  {
+    "author":"J. R. R. Tolkien",
+    "title":"The Lord of the Rings",
+    "address":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ",
+    "isbn":"0-395-19395-8",
+    "price":22.99
+  }
+]
+```
+## example #2
+```
+const templater = require('smart-json-templater')
+
+// example data
+const template = {
+	public: '{{title}} by "{{author}}", only for USD {{price}}',
+	library: '{{address}}',
+}
+const rules = require('./rules.json')
+const raw = require('./raw.json')
+
+templater
+	.convert(template, rules, raw)
+	.then((result)=>{
+			console.log(result)
+	})
+```
+## result #2
+```
+[
+  {
+    "public":"Sayings of the Century by \"Nigel Rees\", only for USD 8.95",
+    "library":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. "
+  },
+  {
+    "public":"Sword of Honour by \"Evelyn Waugh\", only for USD 12.99",
+    "library":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. "
+  },
+  {
+    "public":"Moby Dick by \"Herman Melville\", only for USD 8.99",
+    "library":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. "
+  },
+  {
+    "public":"The Lord of the Rings by \"J. R. R. Tolkien\", only for USD 22.99",
+    "library":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. "
+  }
+]
+```
+## example #3
+```
+const templater = require('smart-json-templater')
+
+// example data
+const template = {
+	type: 'e-book',
+	shipping: true,
+	available: true,
+	information: '{{~}}',
+}
+const rules = require('./rules.json')
+const raw = require('./raw.json')
+
+templater
+	.convert(template, rules, raw)
+	.then((result)=>{
+			console.log(result)
+	})
+```
+## result #3
+
+```
+[
+  {
+    "type":"e-book",
+    "shipping":true,
+    "available":true,
+    "information":{
+      "author":"Nigel Rees",
+      "title":"Sayings of the Century",
+      "address":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ",
+      "isbn":null,
+      "price":8.95
     }
   },
   {
-    "data":{
-      "date":"1458692752478",
-      "message":"text#2",
-      "type":"text-message"
-    },
-    "database":{
-      "id":"mid#2",
-      "pageId":"<PAGE_ID1>"
-    },
-    "user":{
-      "id":"sender#2"
-    },
-    "analyze":true,
-    "normalizer":{
-      "type":"page",
-      "pageId":"<PAGE_ID1>",
-      "type2":"kike",
-      "message":"text#2",
-      "mid":"mid#2",
-      "senderId":"sender#2",
-      "pageTime":1458692752478
+    "type":"e-book",
+    "shipping":true,
+    "available":true,
+    "information":{
+      "author":"Evelyn Waugh",
+      "title":"Sword of Honour",
+      "address":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ",
+      "isbn":null,
+      "price":12.99
     }
   },
   {
-    "data":{
-      "date":"14586927524780000",
-      "message":"hello, world! 3",
-      "type":"text-message"
-    },
-    "database":{
-      "id":"mid.1457764197618:41d102a3e1ae206a38",
-      "pageId":"<PAGE_ID3>"
-    },
-    "user":{
-      "id":"<PSID>"
-    },
-    "analyze":true,
-    "normalizer":{
-      "type":"page",
-      "pageId":"<PAGE_ID3>",
-      "type2":"kike",
-      "message":"hello, world! 3",
-      "mid":"mid.1457764197618:41d102a3e1ae206a38",
-      "senderId":"<PSID>",
-      "pageTime":14586927524780000
+    "type":"e-book",
+    "shipping":true,
+    "available":true,
+    "information":{
+      "author":"Herman Melville",
+      "title":"Moby Dick",
+      "address":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ",
+      "isbn":"0-553-21311-3",
+      "price":8.99
     }
   },
   {
-    "data":{
-      "date":"14586927524780000",
-      "message":"text#2ddd",
-      "type":"text-message"
-    },
-    "database":{
-      "id":"mid#2",
-      "pageId":"<PAGE_ID3>"
-    },
-    "user":{
-      "id":"sender#2"
-    },
-    "analyze":true,
-    "normalizer":{
-      "type":"page",
-      "pageId":"<PAGE_ID3>",
-      "type2":"kike",
-      "message":"text#2ddd",
-      "mid":"mid#2",
-      "senderId":"sender#2",
-      "pageTime":14586927524780000
+    "type":"e-book",
+    "shipping":true,
+    "available":true,
+    "information":{
+      "author":"J. R. R. Tolkien",
+      "title":"The Lord of the Rings",
+      "address":"The Main Library is located on West Circle Drive, south of Grand River Avenue in East Lansing. ",
+      "isbn":"0-395-19395-8",
+      "price":22.99
     }
   }
 ]
