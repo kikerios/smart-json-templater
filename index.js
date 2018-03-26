@@ -7,157 +7,98 @@ const Logger = require('bucker').createLogger({
 const Promise = require('bluebird')
 const _ = require('lodash')
 const jp = require('jsonpath')
-const { object: templater } = require('json-templater')
+const randomstring = require('randomstring')
+const { object: templater, string: render } = require('json-templater')
 
-// set jsonpath default value
-// jp.default({ enable: true, value: null })
-
-const convert = (template, rules, raw) => {
-
-  const clear = (ignore, { value, path }) => {
-    // return { value, path: jp.stringify(path) }
-    return value
-  }
+const convert = (template, rules, raw, flatten = true) => {
+  const SPLIT_KEY = randomstring.generate()
 
   const parent = path =>
-    jp.stringify(_.dropRightWhile(path, (o) => { // eslint-disable-line
-      return !_.isNumber(o)
-    }))
+    jp.stringify(_.dropRightWhile(path, o => !_.isNumber(o)))
 
+  const merge = (ctx, save, value, splitter) =>
+    _.mergeWith(
+      _.cloneDeep(ctx),
+      { [save]: value, [SPLIT_KEY]: splitter },
+    )
 
-  const updatePersistent = ({ save, ignore }, nodes, persistents) => {
-    const isArrayNodes = (_.isArray(nodes) && _.size(nodes) > 1)
-    const isArrayPersistent = (_.isArray(persistents) && _.size(persistents) > 1)
-    const newPersistent = _.map(persistents, (persistent) => {
-      if (isArrayNodes) {
-        if (!isArrayPersistent) {
-          return (_.map(nodes, (node) => { // eslint-disable-line
-            const splitIn = parent(node.path)
-            const merge = _.mergeWith(
-              _.cloneDeep(persistent),
-              { [save]: clear(ignore, node), __split__in__: [splitIn] }, (objValue, srcValue) => {
-                if (_.isArray(objValue)) {
-                  return objValue.concat(srcValue)
-                }
-                return srcValue
-              },
-            )
-            return merge
-          }))
-        } else { // eslint-disable-line
+  const updateContext = (save, nodes, context) => {
+    const multiNodes = _.size(nodes) > 1
+    const multiContext = _.size(context) > 1
 
-          // Logger.debug('persistents %j', persistents)
-          // Logger.debug('nodes %j', nodes)
-          Logger.debug('*******************************************************************************************************')
+    const newContext = _.map(context, (ctx) => {
+      if (multiNodes) {
+        if (!multiContext) {
+          return _.map(nodes, ({ value, path }) => merge(ctx, save, value, [parent(path)]))
+        }
 
-          const spliter = _.get(persistent, '__split__in__', [])
-          Logger.debug('spliter %j', spliter)
+        const splitter = _.get(ctx, SPLIT_KEY, [])
+        let filters = _.filter(nodes, ({ path }) => {
+          let insert = false
+          const nodeParent = parent(path)
+          _.each(splitter, (split) => {
+            if (nodeParent.length === split.length && nodeParent === split) {
+              insert = true
+            }
+          })
+          return insert
+        })
 
-          let filters = _.filter(nodes, ({ path }) => {
-            let startsWith = false
-            const pp = parent(path)
-            Logger.debug('xxx pp %j', pp, path)
-
-            _.each(spliter, (split) => {
-              if (pp.length === split.length && _.startsWith(pp, split)) {
-                startsWith = true
+        if (_.size(filters) === 0) {
+          filters = _.filter(nodes, ({ path }) => {
+            let insert = false
+            const nodeParent = parent(path)
+            _.each(splitter, (split) => {
+              if (_.startsWith(nodeParent, split)) {
+                insert = true
               }
             })
-            Logger.debug('xxx startsWith %j', startsWith)
-
-            return startsWith
+            return insert
           })
-
-          Logger.debug('xxx filters %j', filters)
-
-          if (_.size(filters) === 0) {
-            filters = _.filter(nodes, ({ path }) => {
-              let startsWith = false
-              const pp = parent(path)
-              Logger.debug('yyy pp %j', pp, path)
-
-              _.each(spliter, (split) => {
-                if (_.startsWith(pp, split)) {
-                  startsWith = true
-                }
-              })
-              Logger.debug('yyy startsWith %j', startsWith)
-
-              return startsWith
-            })
-          }
-
-          Logger.debug('yyy filters %j', filters)
-
-          const map = (_.map(filters, (node) => { // eslint-disable-line
-            const splitIn = parent(node.path)
-            const union = _.union([splitIn], spliter)
-
-            Logger.debug('****************')
-            Logger.debug('splitIn %j', splitIn)
-            Logger.debug('union %j', union)
-            Logger.debug('****************')
-            const merge = _.mergeWith(
-              _.cloneDeep(persistent),
-              { [save]: clear(ignore, node), __split__in__: union }, (objValue, srcValue) => {
-                // if (_.isArray(objValue)) {
-                //   return objValue.concat(srcValue)
-                // }
-                return srcValue
-              },
-            )
-            return merge
-          }))
-
-          // Logger.debug('%j', map)
-          return map
         }
+
+        return _.map(filters, ({ value, path }) =>
+          merge(ctx, save, value, _.union([parent(path)], splitter)))
       }
-      const node = _.first(nodes)
-      return _.set(persistent, save, clear(ignore, node)) // eslint-disable-line
+
+      const { value } = _.first(nodes)
+      return _.set(ctx, save, value)
     })
-    if (isArrayPersistent) {
-      return _.reduce(newPersistent, (result, value) => {
-        return result.concat(value)
-      }, [])
+
+    if (multiContext) {
+      return _.reduce(newContext, (result, value) => result.concat(value), [])
     }
-    return isArrayNodes ? _.first(newPersistent) : newPersistent
-  }
 
-  let counter = 0
-  const recursive = (persistent) => {
-    const rule = rules[counter++]// eslint-disable-line
-
-    return new Promise((resolve) => {
-      if (!rule) {
-        return resolve(persistent)
-      }
-
-      const {
-        xpath,
-      } = rule
-
-      Logger.debug('XXXXXXXXXXXXXXXXXXXXXXXXXXxxxxxxx', xpath, 'xxxxxxxXXXXXXXXXXXXXXXXXXXXXXXXXX')
-      const values = jp.nodes(raw, xpath)
-      persistent = updatePersistent( // eslint-disable-line
-        rule,
-        values,
-        _.isArray(persistent) ? persistent : [persistent],
-      )
-
-      return resolve(recursive(persistent))
-    })
+    return multiNodes ? _.first(newContext) : newContext
   }
 
   return new Promise((resolve, reject) => {
-    recursive({})
+    Promise.reduce(rules, (context, rule) => {
+      const {
+        xpath,
+        save,
+      } = rule
+
+      return updateContext(
+        save,
+        jp.nodes(raw, xpath),
+        context,
+      )
+    }, [{}])
       .then((results) => {
-        Logger.info('%j', results)
-        const map = _.map(results, (item) => {
-          _.set(item, 'raw', _.cloneDeep(item))
-          return templater(template, item)
-        })
-        resolve(map)
+        const map = _.map(results, item => templater(template, item, (value, data, key) => { // eslint-disable-line
+          if (value === '{{$}}') {
+            return raw
+          }
+          if (value === '{{~}}') {
+            return _.omit(item, SPLIT_KEY)
+          }
+          return render(value, data)
+        }))
+        if (flatten && _.size(map) === 1) {
+          return resolve(_.first(map))
+        }
+        return resolve(map)
       }).catch((error) => {
         Logger.error(error)
         reject(error)

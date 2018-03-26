@@ -12,7 +12,8 @@ const template = {
     "id": "{{senderId}}"
   },
   "analyze": true,
-  "raw": "{{raw}}"
+  "normalizer": "{{~}}",
+  "raw": "{{$}}"
 }
 
 const raw = {
@@ -94,37 +95,30 @@ const raw = {
 const rules = [
   {
     xpath: '$.object',
-    ignore: null,
     save: 'type',
   },
   {
     xpath: '$.entry[*].id',
-    ignore: null,
     save: 'pageId',
   },
   {
     xpath: '$.test',
-    ignore: null,
     save: 'type2',
   },
   {
     xpath: '$.entry[*].messaging[*].message.text',
-    ignore: null,
     save: 'message',
   },
   {
     xpath: '$.entry[*].messaging[*].message.mid',
-    ignore: null,
     save: 'mid',
   },
   {
     xpath: '$.entry[*].messaging[*].sender.id',
-    ignore: null,
     save: 'senderId',
   },
   {
     xpath: '$.entry[*].time',
-    ignore: null,
     save: 'pageTime',
   },
 ]

@@ -19,6 +19,7 @@
     "json-templater": "^1.2.0",
     "jsonpath": "^1.0.0",
     "lodash": "^4.17.5",
+    "randomstring": "^1.1.5",
     "to-boolean": "^1.0.0"
   }
 }
