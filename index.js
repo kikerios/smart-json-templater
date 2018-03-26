@@ -6,67 +6,99 @@ const Logger = require('bucker').createLogger({
 
 const Promise = require('bluebird')
 const _ = require('lodash')
-const { object: templater } = require('json-templater')
+const jp = require('jsonpath')
+const randomstring = require('randomstring')
+const { object: templater, string: render } = require('json-templater')
 
-const convert = (template, masterRules, raw) => {
-  const results = []
+const convert = (template, rules, raw, flatten = true) => {
+  const SPLIT_KEY = randomstring.generate()
 
-  const saving = ({ ignore, save }, persistent, value) => {
-    if (save) {
-      if (ignore) {
-        value = _.omit(value, ignore) // eslint-disable-line
+  const parent = path =>
+    jp.stringify(_.dropRightWhile(path, o => !_.isNumber(o)))
+
+  const merge = (ctx, save, value, splitter) =>
+    _.mergeWith(
+      _.cloneDeep(ctx),
+      { [save]: value, [SPLIT_KEY]: splitter },
+    )
+
+  const updateContext = (save, nodes, context) => {
+    const multiNodes = _.size(nodes) > 1
+    const multiContext = _.size(context) > 1
+
+    const newContext = _.map(context, (ctx) => {
+      if (multiNodes) {
+        if (!multiContext) {
+          return _.map(nodes, ({ value, path }) => merge(ctx, save, value, [parent(path)]))
+        }
+
+        const splitter = _.get(ctx, SPLIT_KEY, [])
+        let filters = _.filter(nodes, ({ path }) => {
+          let insert = false
+          const nodeParent = parent(path)
+          _.each(splitter, (split) => {
+            if (nodeParent.length === split.length && nodeParent === split) {
+              insert = true
+            }
+          })
+          return insert
+        })
+
+        if (_.size(filters) === 0) {
+          filters = _.filter(nodes, ({ path }) => {
+            let insert = false
+            const nodeParent = parent(path)
+            _.each(splitter, (split) => {
+              if (_.startsWith(nodeParent, split)) {
+                insert = true
+              }
+            })
+            return insert
+          })
+        }
+
+        return _.map(filters, ({ value, path }) =>
+          merge(ctx, save, value, _.union([parent(path)], splitter)))
       }
-      _.set(persistent, save, value)
-    }
-    return persistent
-  }
 
-  const recursive = (rules, data, persistent) =>
-    new Promise((resolve) => {
-      let isEnd = false
-      Promise.reduce(rules, (persistent, rule) => { // eslint-disable-line
-        const {
-          root,
-          path,
-          rules: innerRules,
-          end,
-        } = rule
-
-        // reset end validation
-        isEnd = end
-
-        let source = data // source == data if root == *
-        if (root === 'raw') {
-          source = raw
-        } else if (root !== '/') {
-          source = _.get(persistent, root)
-        }
-
-        const value = (path && path !== '/') ? _.get(source, path) : source
-        const updated = saving(rule, persistent, value)
-
-        if (_.isArray(value) && innerRules) {
-          return Promise.each(value, v => recursive(innerRules, v, _.cloneDeep(updated)))
-        }
-        return updated
-      }, persistent).then((result) => {
-        if (isEnd) {
-          results.push(result)
-        }
-        resolve(result)
-      })
+      const { value } = _.first(nodes)
+      return _.set(ctx, save, value)
     })
 
+    if (multiContext) {
+      return _.reduce(newContext, (result, value) => result.concat(value), [])
+    }
+
+    return multiNodes ? _.first(newContext) : newContext
+  }
+
   return new Promise((resolve, reject) => {
-    recursive(masterRules, raw, {})
-      .then(() => {
-        Logger.debug(JSON.stringify(results))
-        const map = _.map(results, (item) => {
-          _.set(item, 'raw', _.cloneDeep(item))
-          return templater(template, item)
-        })
-        Logger.debug(JSON.stringify(map))
-        resolve(map)
+    Promise.reduce(rules, (context, rule) => {
+      const {
+        xpath,
+        save,
+      } = rule
+
+      return updateContext(
+        save,
+        jp.nodes(raw, xpath),
+        context,
+      )
+    }, [{}])
+      .then((results) => {
+        const map = _.map(results, item => templater(template, item, (value, data, key) => { // eslint-disable-line
+          if (value === '{{$}}') {
+            return raw
+          }
+          if (value === '{{~}}') {
+            return _.omit(item, SPLIT_KEY)
+          }
+          return render(value, data)
+        }))
+        if (flatten && _.size(map) === 1) {
+          return resolve(_.first(map))
+        }
+        return resolve(map)
       }).catch((error) => {
         Logger.error(error)
         reject(error)
