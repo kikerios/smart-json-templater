@@ -117,6 +117,10 @@ const convert = (template, rules, raw, flatten = true) => {
   })
 }
 
+const version = () =>
+  config.get('version')
+
 module.exports = {
   convert,
+  version,
 }

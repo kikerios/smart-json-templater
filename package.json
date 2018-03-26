@@ -7,6 +7,14 @@
     "type": "git",
     "url": "git+ssh://git@github.com:kikerios/smart-json-templater.git"
   },
+  "keywords": [
+    "json",
+    "template",
+    "templater",
+    "recursive",
+    "flatten",
+    "smart"
+  ],
   "scripts": {
     "test": "jest"
   },

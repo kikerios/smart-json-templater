@@ -108,10 +108,9 @@ const template = '{{~}}'
 const rules = require('./rules.json')
 const raw = require('./raw.json')
 
-templater
-	.convert(template, rules, raw)
+templater.convert(template, rules, raw)
 	.then((result)=>{
-			console.log(result)
+		console.log(result)
 	})
 ```
 ## result #1
@@ -159,10 +158,9 @@ const template = {
 const rules = require('./rules.json')
 const raw = require('./raw.json')
 
-templater
-	.convert(template, rules, raw)
+templater.convert(template, rules, raw)
 	.then((result)=>{
-			console.log(result)
+		console.log(result)
 	})
 ```
 ## result #2
@@ -200,10 +198,9 @@ const template = {
 const rules = require('./rules.json')
 const raw = require('./raw.json')
 
-templater
-	.convert(template, rules, raw)
+templater.convert(template, rules, raw)
 	.then((result)=>{
-			console.log(result)
+		console.log(result)
 	})
 ```
 ## result #3
