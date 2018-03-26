@@ -1,6 +1,6 @@
 {
   "name": "smart-json-templater",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Smart Json Templater is an opinionated simple way to do mustache style template replacements on your json objects ",
   "main": "index.js",
   "repository": {
