@@ -1,6 +1,7 @@
 
 
 # 💪 Smart Json Templater 👌
+Smart JSON template(r) is an opinionated simple way to do mustache style template replacements (recursively) on your js and json objects (and of course strings too)!.
 
 ## install
 `npm i smart-json-templater --save`
