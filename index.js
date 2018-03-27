@@ -10,7 +10,8 @@ const jp = require('jsonpath')
 const randomstring = require('randomstring')
 const { object: templater, string: render } = require('json-templater')
 
-const convert = (template, rules, raw, flatten = true) => {
+const convert = (template, rules, data, flatten = true) => {
+  const raw = _.cloneDeep(data)
   const SPLIT_KEY = randomstring.generate()
 
   const parent = path =>
