@@ -21,16 +21,16 @@
   "author": "@kikerios <web.lrios@gmail.com>",
   "license": "ISC",
   "dependencies": {
-    "bluebird": "^3.5.1",
+    "bluebird": "^3.5.3",
     "bucker": "^1.1.1",
     "confidence": "^3.0.2",
     "json-templater": "^1.2.0",
     "jsonpath": "^1.0.0",
-    "lodash": "^4.17.5",
+    "lodash": "^4.17.11",
     "randomstring": "^1.1.5",
     "to-boolean": "^1.0.0"
   },
   "devDependencies": {
-    "jest": "^22.4.3"
+    "jest": "^22.4.4"
   }
 }
